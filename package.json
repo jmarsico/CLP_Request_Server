@@ -1,0 +1,19 @@
+{
+  "name": "nodeServer",
+  "version": "1.0.0",
+  "description": "small server for CLP_knoxville lightwall",
+  "main": "basicServer.js",
+  "dependencies": {
+    "body-parser": "^1.15.0",
+    "httpdispatcher": "^1.0.0",
+    "osc-min": "^1.1.1",
+    "path": "^0.12.7",
+    "express": "^4.13.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ULR Studio",
+  "license": "ISC"
+}
