@@ -1,35 +1,33 @@
-//Lets require/import the HTTP module
+//require/import modules
 var http = require('http');
 var osc = require('osc-min');
 var udp = require('dgram');
 var express = require('express');
 var bodyParser = require('body-parser');
-var winston = require('winston');
 var auth = require('http-auth');
 var path = require('path');
 
-
-
-
-
-//http://localhost:8080/api?explode=2%201&force=0.23%200.1&sweep=0.1%200.2%200.4%200.2%200.3&dots=0.1%200.2
+//set up the objects
 var app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
-// app.use('/', express.static('dist/admin.html'));
 app.use(express.static(path.join(__dirname,'dist')));
 app.set('view engine', 'ejs');
 app.set('views', __dirname + '/dist');
 
 
+
+//////////////------------- SETUP -----------------------------------
+//set up the auth
 var basic = auth.basic({
     realm: "Admin User.",
     file: __dirname + "/data/users.htpasswd"
 });
 
 
-var systemStatus = 'running';
-
+var currentStatus;
+var frameRate;
+var resumeAt;
 
 //udp setup
 var oscDestPort = 12345;
@@ -46,87 +44,85 @@ sock = udp.createSocket("udp4", function(msg, ringo) {
 
 sock.bind(oscInPort);
 
-winston.add(winston.transports.File,{ filename: '/var/log/node.log'});
+//////////////------------- OSC FUNCTIONS -----------------------------------
 
 //----------------------------------------------------------EXPLODE!!
-function send_explode_message(explodeParams) {
+function send_explode_message(params) {
 
-    if(explodeParams.length == 2 || explodeParams.length == 3){
+    if(params.length == 2 || params.length == 3){
         var buf;            //the UDP buffer
         //if we only receive 2 parameters, default size param to 0.5
-        if(explodeParams.length == 2){
+        if(params.length == 2){
             buf = osc.toBuffer({
                 address: "/explode",
                 args: [
-                    parseFloat(explodeParams[0]),
-                    parseFloat(explodeParams[1]),
-                    0.5
+                    parseInt(params[0]),
+                    parseInt(params[1]),
+                    50
                 ]
             })
         }
         //if we receive all 3 parameters for explode
-        else if(explodeParams.length == 3){
+        else if(params.length == 3){
             buf = osc.toBuffer({
                 address: "/explode",
                 args: [
-                    parseFloat(explodeParams[0]),
-                    parseFloat(explodeParams[1]),
-                    parseFloat(explodeParams[2])
+                    parseInt(params[0]),
+                    parseInt(params[1]),
+                    parseInt(params[2])
                 ]
             })
         }
         sock.send(buf, 0, buf.length, 12345, "localhost");
+        console.log(params);
     }
 }
 
 //----------------------------------------------------------SWEEP!!
-function send_sweep_params(sweepParams) {
-    //?sweep=x1 y1 x2 y2 speed
-    var params = sweepParams.split(' ');
-
-
-    if(params.length == 5){
+function send_sweep_params(params) {
+    if(params.length == 4 || params.length == 5){
         var buf;
-        buf = osc.toBuffer({
-            address: "/sweep",
-            args: [
-                params[0],
-                params[1],
-                params[2],
-                params[3],
-                params[4]
-            ]
-        })
-        sock.send(buf, 0, buf.length, 12345, "localhost");
-    }
-}
 
-//----------------------------------------------------------FORCE!!
-function send_force_params(forceParams){
-    var params = forceParams.split(' ');
-    if(params.length == 2){
-        var buf;
-        buf = osc.toBuffer({
-            address: '/dots',
-            args: [
-                params[0],
-                params[1]
-            ]
-        })
+
+        if(params.length == 4){
+            buf = osc.toBuffer({
+                address: "/sweep",
+                args: [
+                    params[0],
+                    params[1],
+                    params[2],
+                    params[3],
+                    50
+                ]
+            })
+        }
+
+        else if(params.length == 5){
+            buf = osc.toBuffer({
+                address: "/sweep",
+                args: [
+                    params[0],
+                    params[1],
+                    params[2],
+                    params[3],
+                    params[4]
+                ]
+            })
+        }
         sock.send(buf, 0, buf.length, 12345, "localhost");
+        console.log(params);
     }
 }
 
 //----------------------------------------------------------DOTS!!
-function send_dots_params(dotsParams){
-    var params = dotsParams.split(' ');
+function send_dots_params(params){
     if(params.length == 2){
         var buf;
         buf = osc.toBuffer({
             address: '/dots',
             args: [
-                parseFloat(params[0]),
-                parseFloat(params[1])
+                parseInt(params[0]),
+                parseInt(params[1])
             ]
         })
         sock.send(buf, 0, buf.length, 12345, "localhost");
@@ -135,61 +131,93 @@ function send_dots_params(dotsParams){
 }
 
 
+//////////////------------- REQUEST HANDLERS ------------------------
 
-//----------------------------------------------------------GET!!
-app.get('/api', function(req, res){
-    //explode
-    var explodeQuery;
-    var sweepParams;
-    var dotsParams;
+//--------GET EXPLODE
+app.get('/explode', function(req, res){
 
-    if(req.query.explode !== 'undefined' && req.query.explode){
-        explodeQuery = req.query.explode;
-        var params = req.query.explode.split(' ');
+    var params =[];
+    if(req.query.start_x) params.push(parseInt(req.query.start_x));
+    if(req.query.start_y) params.push(parseInt(req.query.start_y));
+    if(req.query.size) params.push(parseInt(req.query.size));
+
+
+
+    if(params.length >= 2){
         send_explode_message(params);
+        res.json({
+            'start_x': params[0],
+            'start_y': req.query.start_y,
+            'size': req.query.size
+        });
+    } else {
+        res.json({
+            'status': 404
+        })
     }
-    //force (gravity)
-    if(req.query.force !== 'undefined' && req.query.force){
-        send_force_params(req.query.force);
-    }
-    //sweep
-    if(req.query.sweep !== 'undefined' && req.query.sweep){
-        send_sweep_params(req.query.sweep);
-    }
-    //dots
-    if(req.query.dots !== 'undefined' && req.query.dots){
-        send_dots_params(req.query.dots);
-    }
+});
 
+//--------GET SWEEP
+app.get('/sweep', function(req,res){
+
+    var params = [];
+    if(req.query.start_x) params.push(parseInt(req.query.start_x));
+    if(req.query.start_y) params.push(parseInt(req.query.start_y));
+    if(req.query.end_x) params.push(parseInt(req.query.end_x));
+    if(req.query.end_y) params.push(parseInt(req.query.end_y));
+    if(req.query.speed) params.push(parseInt(req.query.speed));
+
+    if(params.length >= 4){
+        send_sweep_params(params);
+        res.json({
+            'start_x': params[0],
+            'start_y': req.query.start_y,
+            'end_x': req.query.end_x,
+            'end_y': req.query.end_y,
+            'speed': req.query.speed
+        });
+    } else {
+        res.json({
+            'status': 404
+        })
+        console.log(req.query);
+
+    }
+});
+
+//--------GET DOTS
+app.get('/dots', function(req,res){
+    var params =[];
+    if(req.query.size) params.push(parseInt(req.query.size));
+    if(req.query.duration) params.push(parseInt(req.query.duration));
+
+    if(params.length  >= 1){
+        send_dots_params(params);
+        res.json({
+            'size': req.query.size,
+            'duration': req.query.duration
+        });
+    } else {
+        res.json({
+            'status': 404
+        })
+    }
+})
+
+
+
+//{ status: 'current status', scene: 'current scene', frame_rate: 'xfps', resume_at: 'time' }
+app.get('/status', function(req,res){
+    console.log("request status");
     res.json({
-        'explode': explodeQuery,
-        'force': req.query.force,
-        'sweep': req.query.sweep,
-        'dots': req.query.dots
+        'status': currentStatus,
+        'frame_rate': frameRate,
+        'resume_at': resumeAt
     })
-});
+})
 
 
-//----------------------------------------------------------POST!!
-app.post('/api/explode', function(req,res){
-    var params;
-    params.push(req.body.x);
-    params.push(req.body.y);
-    params.push(req.body.size);
-    send_explode_message(req.body);
-});
-
-
-
-//
-// app.get('/', function(req,res){
-//   console.log("someone is here");
-//
-//  res.sendFile(__dirname + '/dist/admin.html');
-//
-// });
-
-//
+//serve the admin.html page with auth
 app.get('/admin', auth.connect(basic), function(req,res){
     console.log("auth test");
     res.sendFile(path.join(__dirname + '/dist/admin.html'));
