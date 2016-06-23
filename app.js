@@ -127,6 +127,17 @@ function send_dots_params(params){
         })
         sock.send(buf, 0, buf.length, 12345, "localhost");
     }
+    else if(params.length == 1){
+	var buf;
+	buf = osc.toBuffer({
+		address:'/dots',
+		args: [
+		   parseInt(params[0]),
+		   50
+		]
+	})
+	sock.send(buf, 0, buf.length, 12345, "localhost");
+    }
 
 }
 
