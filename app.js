@@ -37,9 +37,12 @@ var oscDestPort = 12345;
 var oscInPort = 23456;
 sock = udp.createSocket("udp4", function(msg, ringo) {
     var error, error1, message;
-    visitor.event("Heartbeat", "Heartbeat").send();
+    message= osc.fromBuffer(msg);
+    frameRate = message.args[0].value;
+    visitor.event("Heartbeat", "Heartbeat", "Framerate", frameRate).send();
+    // console.log(frameRate);
     try {
-        return console.log(osc.fromBuffer(msg));
+        // return console.log(osc.fromBuffer(msg));
 
     }   catch(error1) {
         error = error1;
