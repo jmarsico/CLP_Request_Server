@@ -6,6 +6,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var auth = require('http-auth');
 var path = require('path');
+var ua = require('universal-analytics');
 
 //set up the objects
 var app = express();
@@ -15,6 +16,8 @@ app.use(express.static(path.join(__dirname,'dist')));
 app.set('view engine', 'ejs');
 app.set('views', __dirname + '/dist');
 
+//google analytics
+var visitor = ua('UA-77526554-1');
 
 
 //////////////------------- SETUP -----------------------------------
@@ -34,8 +37,10 @@ var oscDestPort = 12345;
 var oscInPort = 23456;
 sock = udp.createSocket("udp4", function(msg, ringo) {
     var error, error1, message;
+    visitor.event("Heartbeat", "Heartbeat").send();
     try {
         return console.log(osc.fromBuffer(msg));
+
     }   catch(error1) {
         error = error1;
         return console.log('invalid OSC packet');
@@ -166,6 +171,7 @@ app.get('/explode', function(req, res){
             'status': 404
         })
     }
+    visitor.event("User Command", "Explode").send();
 });
 
 //--------GET SWEEP
@@ -194,6 +200,7 @@ app.get('/sweep', function(req,res){
         console.log(req.query);
 
     }
+    visitor.event("User Command", "Sweep").send();
 });
 
 //--------GET DOTS
@@ -213,6 +220,7 @@ app.get('/dots', function(req,res){
             'status': 404
         })
     }
+    visitor.event("User Command", "Dots").send();
 })
 
 
@@ -232,7 +240,16 @@ app.get('/status', function(req,res){
 app.get('/admin', auth.connect(basic), function(req,res){
     console.log("auth test");
     res.sendFile(path.join(__dirname + '/dist/admin.html'));
+    visitor.pageview("/admin").send();
 });
+
+//serve the admin.html page with auth
+app.get('/',  function(req,res){
+    console.log("new user");
+    res.sendFile(path.join(__dirname + '/dist/index.html'));
+    visitor.pageview("/").send();
+});
+
 
 
 // //Lets define a port we want to listen to
