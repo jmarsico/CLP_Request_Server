@@ -226,22 +226,22 @@ function send_turnOnOff(bOnOff){
 app.get('/explode', function(req, res){
 
     var params =[];
-    if(req.query.start_x) params.push(parseInt(req.query.start_x));
-    if(req.query.start_y) params.push(parseInt(req.query.start_y));
-    if(req.query.size) params.push(parseInt(req.query.size));
+    if(typeof req.query.start_x !=  'undefined') params.push(parseInt(req.query.start_x));
+    if(typeof req.query.start_y != 'undefined') params.push(parseInt(req.query.start_y));
+    if(typeof req.query.size != 'undefined') params.push(parseInt(req.query.size));
 
     if(params.length >= 2){
         send_explode_message(params);
+     
         res.json({
             'start_x': params[0],
             'start_y': req.query.start_y,
             'size': req.query.size
         });
     } else {
-        res.json({
-            'error': "not enough parameters"
-        });
-    }
+        res.status(404).send('Not Enough Parameters');
+	console.log("not enough params");
+}
     visitor.event("User Command", "Explode").send();
 });
 
