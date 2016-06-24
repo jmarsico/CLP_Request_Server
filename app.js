@@ -7,34 +7,38 @@ var bodyParser = require('body-parser');
 var auth = require('http-auth');
 var path = require('path');
 var ua = require('universal-analytics');
+var exec = require('child_process').exec;
 
 //set up the objects
 var app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(express.static(path.join(__dirname,'dist')));
-app.set('view engine', 'ejs');
-app.set('views', __dirname + '/dist');
+
 
 //google analytics
 var visitor = ua('UA-77526554-2');
 
-
+//////////////////////////////////////////////////////////////////////
 //////////////------------- SETUP -----------------------------------
-//set up the auth
+//////////////////////////////////////////////////////////////////////
+//set up the auth for admin pages
 var basic = auth.basic({
     realm: "Admin User.",
     file: __dirname + "/data/users.htpasswd"
 });
 
 
+//status variables
 var currentStatus;
 var frameRate;
 var resumeAt;
 
-//udp setup
+//OSC setup
 var oscDestPort = 12345;
 var oscInPort = 23456;
+
+//creat socket and listen for incoming messages
 sock = udp.createSocket("udp4", function(msg, ringo) {
     var error, error1, message;
     message= osc.fromBuffer(msg);
@@ -58,25 +62,38 @@ sock = udp.createSocket("udp4", function(msg, ringo) {
     }
 
     try {
-        return console.log(osc.fromBuffer(msg));
-
+        // return console.log(osc.fromBuffer(msg));
     }   catch(error1) {
         error = error1;
         return console.log('invalid OSC packet');
     }
 });
 
+//bind to the port and listen
 sock.bind(oscInPort);
 
-//////////////------------- OSC FUNCTIONS -----------------------------------
+
+
+
+function execute(command, callback){
+    exec(command, function(error, stdout, stderr) { callback(stdout); });
+}
+
+
+
+//////////////////////////////////////////////////////////////////////
+//////////////------------- OSC SENDERS------- ------------------------
+//////////////////////////////////////////////////////////////////////
 
 //----------------------------------------------------------EXPLODE!!
 function send_explode_message(params) {
 
+    //if the number of parameters is correct, send OSC messages
     if(params.length == 2 || params.length == 3){
         var buf;            //the UDP buffer
         //if we only receive 2 parameters, default size param to 0.5
         if(params.length == 2){
+            //create a buffer to send OSC message
             buf = osc.toBuffer({
                 address: "/explode",
                 args: [
@@ -97,8 +114,10 @@ function send_explode_message(params) {
                 ]
             })
         }
+
+        //send the OSC buffer over UDP
         sock.send(buf, 0, buf.length, 12345, "localhost");
-        console.log(params);
+        console.log("explode" + params);
     }
 }
 
@@ -106,8 +125,6 @@ function send_explode_message(params) {
 function send_sweep_params(params) {
     if(params.length == 4 || params.length == 5){
         var buf;
-
-
         if(params.length == 4){
             buf = osc.toBuffer({
                 address: "/sweep",
@@ -120,7 +137,6 @@ function send_sweep_params(params) {
                 ]
             })
         }
-
         else if(params.length == 5){
             buf = osc.toBuffer({
                 address: "/sweep",
@@ -134,39 +150,41 @@ function send_sweep_params(params) {
             })
         }
         sock.send(buf, 0, buf.length, 12345, "localhost");
-        console.log(params);
+        console.log("sweep" + params);
     }
 }
 
 //----------------------------------------------------------DOTS!!
 function send_dots_params(params){
-    if(params.length == 2){
+
+    if(params.length == 1 || params.length == 2){
         var buf;
-        buf = osc.toBuffer({
-            address: '/dots',
-            args: [
-                parseInt(params[0]),
-                parseInt(params[1])
-            ]
-        })
+        if(params.length == 2){
+            buf = osc.toBuffer({
+                address: '/dots',
+                args: [
+                    parseInt(params[0]),
+                    parseInt(params[1])
+                ]
+            })
+        }
+        else if(params.length == 1){
+        	buf = osc.toBuffer({
+        		address:'/dots',
+        		args: [
+        		   parseInt(params[0]),
+        		   50
+        		]
+        	})
+        }
         sock.send(buf, 0, buf.length, 12345, "localhost");
-    }
-    else if(params.length == 1){
-	var buf;
-	buf = osc.toBuffer({
-		address:'/dots',
-		args: [
-		   parseInt(params[0]),
-		   50
-		]
-	})
-	sock.send(buf, 0, buf.length, 12345, "localhost");
+        console.log("dots" + params);
     }
 
 }
 
 //----------------------------------------------------------PAUSE!!
-function send_dots_params(params){
+function send_pause(params){
     if(params.length == 1){
         var buf;
         buf = osc.toBuffer({
@@ -179,7 +197,30 @@ function send_dots_params(params){
     }
 }
 
+
+//----------------------------------------------------------PAUSE!!
+function send_turnOnOff(bOnOff){
+    var buf;
+    buf = osc.toBuffer({
+        address: '/turnOnOff',
+        args: [
+            bOnOff
+        ]
+    })
+    sock.send(buf, 0, buf.length, 12345, "localhost");
+}
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
 //////////////------------- REQUEST HANDLERS ------------------------
+//////////////////////////////////////////////////////////////////////
 
 //--------GET EXPLODE
 app.get('/explode', function(req, res){
@@ -188,8 +229,6 @@ app.get('/explode', function(req, res){
     if(req.query.start_x) params.push(parseInt(req.query.start_x));
     if(req.query.start_y) params.push(parseInt(req.query.start_y));
     if(req.query.size) params.push(parseInt(req.query.size));
-
-
 
     if(params.length >= 2){
         send_explode_message(params);
@@ -200,8 +239,8 @@ app.get('/explode', function(req, res){
         });
     } else {
         res.json({
-            'status': 404
-        })
+            'error': "not enough parameters"
+        });
     }
     visitor.event("User Command", "Explode").send();
 });
@@ -227,8 +266,8 @@ app.get('/sweep', function(req,res){
         });
     } else {
         res.json({
-            'status': 404
-        })
+            'error': "not enough parameters"
+        });
         console.log(req.query);
 
     }
@@ -249,7 +288,7 @@ app.get('/dots', function(req,res){
         });
     } else {
         res.json({
-            'status': 404
+            'error': "not enough parameters"
         });
     }
     visitor.event("User Command", "Dots").send();
@@ -257,7 +296,7 @@ app.get('/dots', function(req,res){
 
 
 
-//{ status: 'current status', scene: 'current scene', frame_rate: 'xfps', resume_at: 'time' }
+//--------------GET STATUS
 app.get('/status', auth.connect(basic), function(req,res){
     console.log("request status");
     res.json({
@@ -267,26 +306,66 @@ app.get('/status', auth.connect(basic), function(req,res){
     });
 });
 
+
+//------------------GET PAUSE
 app.get('/pause', auth.connect(basic), function(req,res){
+    var params =[];
+
+    if(req.query.seconds) params.push(parseInt(req.query.seconds));
+    if(params.length == 1){
+        send_pause(params);
+        res.json({
+            'pause': req.query.seconds
+        });
+    } else {
+        res.json({
+            'error': "not enough parameters"
+        });
+    }
 
 });
 
+app.get('/turnOn', auth.connect(basic), function(req,res){
+    send_turnOnOff(true);
+    res.json({
+        'turnOn': 'hi'
+    });
+});
+
+app.get('/turnOff', auth.connect(basic), function(req,res){
+    send_turnOnOff(false);
+    res.json({
+        'turnOff': 'hi'
+    });
+});
+
+app.get('/hardReset', auth.connect(basic), function(req,res){
+    execute('shutdown -r now', function(callback){
+        console.log(callback);
+    });
+    res.json({
+        'hardReset': 'please wait'
+    });
+});
 
 //serve the admin.html page with auth
 app.get('/admin', auth.connect(basic), function(req,res){
-    console.log("auth test");
+    console.log("auth user");
     res.sendFile(path.join(__dirname + '/dist/admin.html'));
     visitor.pageview("/admin").send();
 });
 
-//serve the admin.html page with auth
+
+
+
+
+
+//serve the index.html page with auth
 app.get('/',  function(req,res){
     console.log("new user");
     res.sendFile(path.join(__dirname + '/dist/index.html'));
     visitor.pageview("/").send();
 });
-
-
 
 // //Lets define a port we want to listen to
 const PORT=80;
