@@ -232,7 +232,7 @@ app.get('/explode', function(req, res){
 
     if(params.length >= 2){
         send_explode_message(params);
-     
+
         res.json({
             'start_x': params[0],
             'start_y': req.query.start_y,
@@ -249,11 +249,11 @@ app.get('/explode', function(req, res){
 app.get('/sweep', function(req,res){
 
     var params = [];
-    if(req.query.start_x) params.push(parseInt(req.query.start_x));
-    if(req.query.start_y) params.push(parseInt(req.query.start_y));
-    if(req.query.end_x) params.push(parseInt(req.query.end_x));
-    if(req.query.end_y) params.push(parseInt(req.query.end_y));
-    if(req.query.speed) params.push(parseInt(req.query.speed));
+    if(typeof req.query.start_x != 'undefined') params.push(parseInt(req.query.start_x));
+    if(typeof req.query.start_y != 'undefined') params.push(parseInt(req.query.start_y));
+    if(typeof req.query.end_x != 'undefined') params.push(parseInt(req.query.end_x));
+    if(typeof req.query.end_y != 'undefined') params.push(parseInt(req.query.end_y));
+    if(typeof req.query.speed != 'undefined') params.push(parseInt(req.query.speed));
 
     if(params.length >= 4){
         send_sweep_params(params);
@@ -277,8 +277,8 @@ app.get('/sweep', function(req,res){
 //--------GET DOTS
 app.get('/dots', function(req,res){
     var params =[];
-    if(req.query.size) params.push(parseInt(req.query.size));
-    if(req.query.duration) params.push(parseInt(req.query.duration));
+    if(typeof req.query.size != 'undefined') params.push(parseInt(req.query.size));
+    if(typeof req.query.duration != 'undefined') params.push(parseInt(req.query.duration));
 
     if(params.length  >= 1){
         send_dots_params(params);
@@ -311,7 +311,7 @@ app.get('/status', auth.connect(basic), function(req,res){
 app.get('/pause', auth.connect(basic), function(req,res){
     var params =[];
 
-    if(req.query.seconds) params.push(parseInt(req.query.seconds));
+    if(typeof req.query.seconds != 'undefined') params.push(parseInt(req.query.seconds));
     if(params.length == 1){
         send_pause(params);
         res.json({
