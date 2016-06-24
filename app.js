@@ -17,7 +17,7 @@ app.set('view engine', 'ejs');
 app.set('views', __dirname + '/dist');
 
 //google analytics
-var visitor = ua('UA-77526554-1');
+var visitor = ua('UA-77526554-2');
 
 
 //////////////------------- SETUP -----------------------------------
