@@ -38,11 +38,27 @@ var oscInPort = 23456;
 sock = udp.createSocket("udp4", function(msg, ringo) {
     var error, error1, message;
     message= osc.fromBuffer(msg);
+
+    //extract the framerate from OSC message
     frameRate = message.args[0].value;
-    visitor.event("Heartbeat", "Heartbeat", "Framerate", frameRate).send();
-    // console.log(frameRate);
+
+    //extract the status from OSC message (is system sending to lights?)
+    var sending = message.args[1].value;
+
+    //extract the amount of pause time remaining
+    resumeAt = message.args[2].value;
+
+    //change local status and tell GA
+    if(sending == true){
+        currentStatus = "ON";
+        visitor.event("Heartbeat", "ON", "Framerate", frameRate).send();
+    } else if(sending == false){
+        currentStatus = "OFF";
+        visitor.event("Heartbeat", "OFF", "Framerate", frameRate).send();
+    }
+
     try {
-        // return console.log(osc.fromBuffer(msg));
+        return console.log(osc.fromBuffer(msg));
 
     }   catch(error1) {
         error = error1;
@@ -149,6 +165,19 @@ function send_dots_params(params){
 
 }
 
+//----------------------------------------------------------PAUSE!!
+function send_dots_params(params){
+    if(params.length == 1){
+        var buf;
+        buf = osc.toBuffer({
+            address: '/pause',
+            args: [
+                parseInt(params[0])
+            ]
+        })
+        sock.send(buf, 0, buf.length, 12345, "localhost");
+    }
+}
 
 //////////////------------- REQUEST HANDLERS ------------------------
 
@@ -221,22 +250,26 @@ app.get('/dots', function(req,res){
     } else {
         res.json({
             'status': 404
-        })
+        });
     }
     visitor.event("User Command", "Dots").send();
-})
+});
 
 
 
 //{ status: 'current status', scene: 'current scene', frame_rate: 'xfps', resume_at: 'time' }
-app.get('/status', function(req,res){
+app.get('/status', auth.connect(basic), function(req,res){
     console.log("request status");
     res.json({
         'status': currentStatus,
         'frame_rate': frameRate,
         'resume_at': resumeAt
-    })
-})
+    });
+});
+
+app.get('/pause', auth.connect(basic), function(req,res){
+
+});
 
 
 //serve the admin.html page with auth
