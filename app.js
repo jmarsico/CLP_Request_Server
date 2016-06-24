@@ -212,12 +212,6 @@ function send_turnOnOff(bOnOff){
 
 
 
-
-
-
-
-
-
 //////////////////////////////////////////////////////////////////////
 //////////////------------- REQUEST HANDLERS ------------------------
 //////////////////////////////////////////////////////////////////////
@@ -337,12 +331,14 @@ app.get('/turnOff', auth.connect(basic), function(req,res){
 });
 
 app.get('/hardReset', auth.connect(basic), function(req,res){
-    execute('shutdown -r now', function(callback){
-        console.log(callback);
-    });
     res.json({
         'hardReset': 'please wait'
     });
+
+    execute('shutdown -r now', function(callback){
+        console.log(callback);
+    });
+
 });
 
 //serve the admin.html page with auth
@@ -351,10 +347,6 @@ app.get('/admin', auth.connect(basic), function(req,res){
     res.sendFile(path.join(__dirname + '/dist/admin.html'));
     visitor.pageview("/admin").send();
 });
-
-
-
-
 
 
 //serve the index.html page with auth
