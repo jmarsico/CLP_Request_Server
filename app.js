@@ -240,7 +240,7 @@ app.get('/explode', function(req, res){
         });
     } else {
         res.status(404).send('Not Enough Parameters');
-	console.log("not enough params");
+    	console.log("not enough params");
 }
     visitor.event("User Command", "Explode").send();
 });
@@ -265,9 +265,8 @@ app.get('/sweep', function(req,res){
             'speed': req.query.speed
         });
     } else {
-        res.json({
-            'error': "not enough parameters"
-        });
+        res.status(404).send('Not Enough Parameters');
+    	console.log("not enough params");
         console.log(req.query);
 
     }
@@ -287,9 +286,8 @@ app.get('/dots', function(req,res){
             'duration': req.query.duration
         });
     } else {
-        res.json({
-            'error': "not enough parameters"
-        });
+        res.status(404).send('Not Enough Parameters');
+    	console.log("not enough params");
     }
     visitor.event("User Command", "Dots").send();
 });
@@ -318,9 +316,8 @@ app.get('/pause', auth.connect(basic), function(req,res){
             'pause': req.query.seconds
         });
     } else {
-        res.json({
-            'error': "not enough parameters"
-        });
+        res.status(404).send('Not Enough Parameters');
+    	console.log("not enough params");
     }
 
 });
