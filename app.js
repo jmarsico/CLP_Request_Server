@@ -44,8 +44,10 @@ sock = udp.createSocket("udp4", function(msg, ringo) {
     message= osc.fromBuffer(msg);
 
     //extract the framerate from OSC message
+    if(message.args[0].value){
     frameRate = message.args[0].value;
-
+}
+//    console.log(frameRate);
     //extract the status from OSC message (is system sending to lights?)
     var sending = message.args[1].value;
 
@@ -291,10 +293,11 @@ app.get('/dots', function(req,res){
 //--------------GET STATUS
 app.get('/status', auth.connect(basic), function(req,res){
     console.log("request status");
+    console.log(frameRate);
     res.json({
         'status': currentStatus,
-        'frame_rate': frameRate,
-        'resume_at': resumeAt
+        'frameRate': frameRate,
+        'resumeAt': resumeAt
     });
 });
 
@@ -302,12 +305,12 @@ app.get('/status', auth.connect(basic), function(req,res){
 //------------------GET PAUSE
 app.get('/pause', auth.connect(basic), function(req,res){
     var params =[];
-
-    if(typeof req.query.seconds != 'undefined') params.push(parseInt(req.query.seconds));
+    console.log(req.query);
+    if(typeof req.query.minutes != 'undefined') params.push(parseInt(req.query.minutes));
     if(params.length == 1){
         send_pause(params);
         res.json({
-            'pause': req.query.seconds
+            'pause': req.query.minutes
         });
     } else {
         res.status(404).send('Not Enough Parameters');
@@ -321,6 +324,7 @@ app.get('/turnOn', auth.connect(basic), function(req,res){
     res.json({
         'turnOn': 'hi'
     });
+    console.log("turn on msg");
 });
 
 app.get('/turnOff', auth.connect(basic), function(req,res){
@@ -328,6 +332,7 @@ app.get('/turnOff', auth.connect(basic), function(req,res){
     res.json({
         'turnOff': 'hi'
     });
+    console.log("turn OFF");
 });
 
 app.get('/hardReset', auth.connect(basic), function(req,res){
