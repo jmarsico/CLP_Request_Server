@@ -336,7 +336,7 @@ app.get('/pause', auth.connect(basic), function(req,res){
         console.log( timeString);
 
         res.json({
-            'resumeAt': timeString
+            'resumeAt': timeString,
             'pause': req.query.minutes
         });
     } else {
