@@ -15,5 +15,14 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "ULR Studio",
-  "license": "ISC"
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jmarsico/CLP_Request_Server.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/jmarsico/CLP_Request_Server/issues"
+  },
+  "homepage": "https://github.com/jmarsico/CLP_Request_Server"
 }

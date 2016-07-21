@@ -44,13 +44,25 @@ sock = udp.createSocket("udp4", function(msg, ringo) {
     message= osc.fromBuffer(msg);
 
     //extract the framerate from OSC message
-    frameRate = message.args[0].value;
+    if( message.args[0].value){
+        frameRate = toString(message.args[0].value);
+    }
 
     //extract the status from OSC message (is system sending to lights?)
     var sending = message.args[1].value;
 
     //extract the amount of pause time remaining
-    resumeAt = message.args[2].value;
+    var millisRemaining = message.args[2].value;
+
+    var d = new Date();
+    var currentHours = d.getHours();
+    var currentMin = d.getMinutes();
+
+    var minRemaining = millisRemaining/(1000*60);
+    var futureHours = currentHours + (minRemaining / 60);
+    var futureMin = currentMin + (minRemaining % 60);
+    currentHours += futureMin % 60;
+    resumeAt = (toString(futureHours) + ":" + toString(futureMin));
 
     //change local status and tell GA
     if(sending == true){
@@ -291,10 +303,11 @@ app.get('/dots', function(req,res){
 //--------------GET STATUS
 app.get('/status', auth.connect(basic), function(req,res){
     console.log("request status");
+    console.log(frameRate);
     res.json({
         'status': currentStatus,
-        'frame_rate': frameRate,
-        'resume_at': resumeAt
+        'frameRate': frameRate,
+        'resumeAt': resumeAt
     });
 });
 
@@ -303,11 +316,27 @@ app.get('/status', auth.connect(basic), function(req,res){
 app.get('/pause', auth.connect(basic), function(req,res){
     var params =[];
 
-    if(typeof req.query.seconds != 'undefined') params.push(parseInt(req.query.seconds));
+    if(typeof req.query.minutes != 'undefined') params.push(parseInt(req.query.minutes));
     if(params.length == 1){
         send_pause(params);
+
+        var d = new Date();
+        var currentHours = parseInt(d.getHours());
+        console.log(currentHours);
+        var currentMin = parseInt(d.getMinutes());
+        console.log(currentMin);
+
+        var futureHours = parseInt(currentHours + Math.floor(params[0] / 60));
+        console.log('fh' + futureHours);
+        var futureMin = parseInt(currentMin + (params[0] % 60));
+        console.log('fm' + futureMin);
+        futureHours += parseInt(futureMin % 60);
+        console.log('fh' + futureHours);
+        var timeString = (futureHours + ":" + futureMin);
+        console.log( timeString);
+
         res.json({
-            'pause': req.query.seconds
+            'resumeAt': timeString
         });
     } else {
         res.status(404).send('Not Enough Parameters');
@@ -321,6 +350,7 @@ app.get('/turnOn', auth.connect(basic), function(req,res){
     res.json({
         'turnOn': 'hi'
     });
+
 });
 
 app.get('/turnOff', auth.connect(basic), function(req,res){
