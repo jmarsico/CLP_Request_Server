@@ -44,10 +44,10 @@ sock = udp.createSocket("udp4", function(msg, ringo) {
     message= osc.fromBuffer(msg);
 
     //extract the framerate from OSC message
-    if( message.args[0].value){
-        frameRate = toString(message.args[0].value);
-    }
-
+    if(message.args[0].value){
+    frameRate = message.args[0].value;
+}
+//    console.log(frameRate);
     //extract the status from OSC message (is system sending to lights?)
     var sending = message.args[1].value;
 
@@ -337,6 +337,7 @@ app.get('/pause', auth.connect(basic), function(req,res){
 
         res.json({
             'resumeAt': timeString
+            'pause': req.query.minutes
         });
     } else {
         res.status(404).send('Not Enough Parameters');
@@ -358,6 +359,7 @@ app.get('/turnOff', auth.connect(basic), function(req,res){
     res.json({
         'turnOff': 'hi'
     });
+    console.log("turn OFF");
 });
 
 app.get('/hardReset', auth.connect(basic), function(req,res){
